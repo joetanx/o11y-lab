@@ -19,7 +19,7 @@ const PORT = parseInt(process.env.PORT || '8080');
 const app = express();
 
 app.get('/rolldice', (req, res) => {
-  logger.info(`${req.method} - ${req.socket.remoteAddress}:${req.socket.remotePort} using ${req.headers['user-agent']} at ${req.method} ${req.originalUrl}`)
+  logger.info(`${req.socket.remoteAddress}:${req.socket.remotePort} ${req.method} ${req.method} ${req.originalUrl} ${req.headers['user-agent']}`)
   const histogram = meter.createHistogram('task.duration');
   const startTime = new Date().getTime();
 
