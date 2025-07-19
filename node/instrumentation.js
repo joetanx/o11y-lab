@@ -19,13 +19,10 @@ registerInstrumentations({
 const { trace } = require('@opentelemetry/api');
 const { BasicTracerProvider, BatchSpanProcessor } = require('@opentelemetry/sdk-trace-base');
 const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-proto');
-// Create the TracerProvider with resource
-const tracerProvider = new BasicTracerProvider({ resource });
-// Add a span processor and exporter
-tracerProvider.addSpanProcessor(new BatchSpanProcessor(new OTLPTraceExporter()));
-// Register the provider as the global one
-tracerProvider.register();
-// Optional: set global tracer if needed
+const tracerProvider = new BasicTracerProvider({
+  resource,
+  spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter())]
+});
 trace.setGlobalTracerProvider(tracerProvider);
 
 // metrics
