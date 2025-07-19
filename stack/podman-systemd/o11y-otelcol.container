@@ -1,0 +1,17 @@
+[Unit]
+Description=o11y stack: otelcol container
+Requires=o11y-tempo.service
+Requires=o11y-loki.service
+After=o11y-tempo.service
+
+[Container]
+ContainerName=otelcol
+HostName=otelcol
+Image=docker.io/otel/opentelemetry-collector-contrib:latest
+Network=o11y.network
+PublishPort=4317-4318:4317-4318
+PublishPort=9464:9464
+Volume=/etc/otelcol/config.yaml:/etc/otelcol-contrib/config.yaml
+
+[Install]
+WantedBy=multi-user.target
