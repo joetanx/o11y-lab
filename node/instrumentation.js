@@ -37,7 +37,6 @@ const meterProvider = new MeterProvider({
   resource,
   readers: [metricReader]
 });
-// Set this MeterProvider to be global to the app being instrumented.
 metrics.setGlobalMeterProvider(meterProvider);
 
 // logs
