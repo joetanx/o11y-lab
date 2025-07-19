@@ -1,85 +1,60 @@
+## 1. Setup o11y stack
+
+```mermaid
+flowchart TD
+
+  subgraph Collection
+    A(Application)
+    B(Otel collector)
+  end
+
+  subgraph Backends
+    C(Tempo)
+    D(Loki)
+    E(Prometheus)
+  end
+
+  subgraph Visualization
+    F(Grafana)
+  end
+
+  A -->|OTLP: 4317| B
+  B -->|Push traces: 4317| C
+  B -->|Push logs: 3100| D
+  E -->|Scrape metrics: 9464| B
+
+  F -->|9090| E
+  F -->|3100| D
+  F -->|3200| C
+```
+
+### 1.1. Setup preparation
+
+- Install packages
+- Setup firewall rules
+- Create stack directories
+- Prepare stack configuration files
+
 ```sh
-yum -y install podman jq container-selinux
-firewall-cmd --permanent --add-port 4317/tcp --add-port 4318/tcp --add-port 9464/tcp --add-port 9090/tcp --add-port 3000/tcp --add-port 3100/tcp --add-port 3200/tcp && firewall-cmd --reload
+yum -y install podman jq container-selinux npm
+firewall-cmd --permanent --add-port 3000/tcp --add-port 3100/tcp --add-port 3200/tcp --add-port 4317/tcp --add-port 4318/tcp --add-port 8080/tcp --add-port 9464/tcp --add-port 9090/tcp && firewall-cmd --reload
 mkdir -p /etc/otelcol /etc/prometheus /etc/tempo /var/prometheus /var/tempo /var/loki /var/grafana
 chown -R 65534:65534 /var/prometheus
 chown -R 10001:10001 /var/tempo
 chown -R 10001:10001 /var/loki
 chown -R 472:472 /var/grafana
+curl -sLo /etc/otelcol/config.yaml https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack-config/otelcol.yaml
+curl -sLo /etc/prometheus/prometheus.yml https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack-config/prometheus.yml
+curl -sLo /etc/tempo/tempo.yaml https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack-config/tempo.yaml
 ```
 
-```sh
-cat << EOF > /etc/otelcol/config.yaml
-receivers:
-  otlp:
-    protocols:
-      grpc:
-        endpoint: 0.0.0.0:4317
-      http:
-        endpoint: 0.0.0.0:4318
-processors:
-  batch:
-exporters:
-  prometheus:
-    endpoint: 0.0.0.0:9464
-  loki:
-    endpoint: http://loki:3100/loki/api/v1/push
-  otlp/tempo:
-    endpoint: tempo:4317
-    tls:
-      insecure: true
-  debug:
-    verbosity: detailed
-extensions:
-  health_check:
-  pprof:
-  zpages:
-service:
-  extensions: [health_check, pprof, zpages]
-  pipelines:
-    traces:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [otlp/tempo]
-    metrics:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [prometheus]
-    logs:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [loki]
-EOF
-cat << EOF > /etc/prometheus/prometheus.yml
-global:
-  scrape_interval: 15s
-scrape_configs:
-  - job_name: 'otelcol'
-    static_configs:
-      - targets: ['otelcol:9464']
-EOF
-cat << EOF > /etc/tempo/tempo.yaml
-server:
-  http_listen_port: 3200
-distributor:
-  receivers:
-    otlp:
-      protocols:
-        grpc:
-          endpoint: 0.0.0.0:4317 #tempo listens on 127.0.0.1:4317 if this is not specified; will not be published to host, for container network communication only
-ingester:
-  trace_idle_period: 10s
-  max_block_duration: 5m
-compactor:
-  compaction:
-    block_retention: 1h
-storage:
-  trace:
-    backend: local
-    local:
-      path: /var/tempo/traces
-EOF
-```
+### 1.2. Run o11y stack
+
+#### 1.2.1. Option 1: using podman CLI
+
+> [!Note]
+>
+> Does not auto start on host reboot
 
 ```sh
 podman network create o11y
@@ -90,115 +65,20 @@ podman run --name loki -d -p 3100:3100 --network o11y -v /var/loki:/loki:Z docke
 podman run --name grafana -d -p 3000:3000 --network o11y -v /var/grafana:/var/lib/grafana:Z docker.io/grafana/grafana:latest
 ```
 
+#### 1.2.2. Option 2: using systemd (quadlets)
+
 ```sh
 podman pull docker.io/otel/opentelemetry-collector-contrib:latest
 podman pull docker.io/prom/prometheus:latest
 podman pull docker.io/grafana/tempo:latest
 podman pull docker.io/grafana/loki:latest
 podman pull docker.io/grafana/grafana:latest
-cat << EOF > /etc/containers/systemd/o11y.network
-[Unit]
-Description=o11y stack: network
-After=network.target
-
-[Network]
-NetworkName=o11y
-
-[Install]
-WantedBy=multi-user.target
-EOF
-cat << EOF > /etc/containers/systemd/o11y-otelcol.container
-[Unit]
-Description=o11y stack: otelcol container
-Requires=o11y-tempo.service
-Requires=o11y-prometheus.service
-Requires=o11y-loki.service
-Requires=o11y-grafana.service
-After=o11y-tempo.service
-
-[Container]
-ContainerName=otelcol
-HostName=otelcol
-Image=docker.io/otel/opentelemetry-collector-contrib:latest
-Network=o11y.network
-PublishPort=4317-4318:4317-4318
-PublishPort=9464:9464
-Volume=/etc/otelcol/config.yaml:/etc/otelcol-contrib/config.yaml
-
-[Install]
-WantedBy=multi-user.target
-EOF
-cat << EOF > /etc/containers/systemd/o11y-prometheus.container
-[Unit]
-Description=o11y stack: prometheus container
-Requires=o11y-network.service
-After=o11y-network.service
-
-[Container]
-ContainerName=prometheus
-HostName=prometheus
-Image=docker.io/prom/prometheus:latest
-Network=o11y.network
-PublishPort=9090:9090
-Volume=/etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-Volume=/var/prometheus:/prometheus:Z
-
-[Install]
-WantedBy=multi-user.target
-EOF
-cat << EOF > /etc/containers/systemd/o11y-tempo.container
-[Unit]
-Description=o11y stack: tempo container
-Requires=o11y-network.service
-After=o11y-network.service
-
-[Container]
-ContainerName=tempo
-HostName=tempo
-Image=docker.io/grafana/tempo:latest
-Exec=-config.file=/etc/tempo.yaml
-Network=o11y.network
-PublishPort=3200:3200
-Volume=/etc/tempo/tempo.yaml:/etc/tempo.yaml
-Volume=/var/tempo:/var/tempo:Z
-
-[Install]
-WantedBy=multi-user.target
-EOF
-cat << EOF > /etc/containers/systemd/o11y-loki.container
-[Unit]
-Description=o11y stack: loki container
-Requires=o11y-network.service
-After=o11y-network.service
-
-[Container]
-ContainerName=loki
-HostName=loki
-Image=docker.io/grafana/loki:latest
-Network=o11y.network
-PublishPort=3100:3100
-Volume=/var/loki:/loki:Z
-
-[Install]
-WantedBy=multi-user.target
-EOF
-cat << EOF > /etc/containers/systemd/o11y-grafana.container
-[Unit]
-Description=o11y stack: grafana container
-Requires=o11y-network.service
-After=o11y-network.service
-
-[Container]
-ContainerName=grafana
-HostName=grafana
-Image=docker.io/grafana/grafana:latest
-Network=o11y.network
-PublishPort=3000:3000
-Volume=/var/grafana:/var/lib/grafana:Z
-
-[Install]
-WantedBy=multi-user.target
-EOF
+curl -sLo /etc/containers/systemd/o11y.network https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack/podman-systemd/o11y.network
+curl -sLo /etc/containers/systemd/o11y-otelcol.container https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack/podman-systemd/o11y-otelcol.container
+curl -sLo /etc/containers/systemd/o11y-prometheus.container https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack/podman-systemd/o11y-prometheus.container
+curl -sLo /etc/containers/systemd/o11y-tempo.container https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack/podman-systemd/o11y-tempo.container
+curl -sLo /etc/containers/systemd/o11y-loki.container https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack/podman-systemd/o11y-loki.container
+curl -sLo /etc/containers/systemd/o11y-grafana.container https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack/podman-systemd/o11y-grafana.container
 systemctl daemon-reload
-systemctl start o11y-otelcol
+systemctl start o11y-grafana
 ```
