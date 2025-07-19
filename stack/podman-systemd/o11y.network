@@ -1,0 +1,9 @@
+[Unit]
+Description=o11y stack: network
+After=network.target
+
+[Network]
+NetworkName=o11y
+
+[Install]
+WantedBy=multi-user.target
