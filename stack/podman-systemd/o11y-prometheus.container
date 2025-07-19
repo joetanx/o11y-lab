@@ -1,0 +1,16 @@
+[Unit]
+Description=o11y stack: prometheus container
+Requires=o11y-otelcol.service
+After=o11y-otelcol.service
+
+[Container]
+ContainerName=prometheus
+HostName=prometheus
+Image=docker.io/prom/prometheus:latest
+Network=o11y.network
+PublishPort=9090:9090
+Volume=/etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+Volume=/var/prometheus:/prometheus:Z
+
+[Install]
+WantedBy=multi-user.target
