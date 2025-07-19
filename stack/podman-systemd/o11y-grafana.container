@@ -1,0 +1,15 @@
+[Unit]
+Description=o11y stack: grafana container
+Requires=o11y-prometheus.service
+After=o11y-prometheus.service
+
+[Container]
+ContainerName=grafana
+HostName=grafana
+Image=docker.io/grafana/grafana:latest
+Network=o11y.network
+PublishPort=3000:3000
+Volume=/var/grafana:/var/lib/grafana:Z
+
+[Install]
+WantedBy=multi-user.target  
