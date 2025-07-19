@@ -1,0 +1,15 @@
+[Unit]
+Description=o11y stack: loki container
+Requires=o11y-network.service
+After=o11y-network.service
+
+[Container]
+ContainerName=loki
+HostName=loki
+Image=docker.io/grafana/loki:latest
+Network=o11y.network
+PublishPort=3100:3100
+Volume=/var/loki:/loki:Z
+
+[Install]
+WantedBy=multi-user.target
