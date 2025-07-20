@@ -42,9 +42,9 @@ chown -R 65534:65534 /var/prometheus
 chown -R 10001:10001 /var/tempo
 chown -R 10001:10001 /var/loki
 chown -R 472:472 /var/grafana
-curl -sLo /etc/otelcol/config.yaml https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack-config/otelcol.yaml
-curl -sLo /etc/prometheus/prometheus.yml https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack-config/prometheus.yml
-curl -sLo /etc/tempo/tempo.yaml https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack-config/tempo.yaml
+curl -sLo /etc/otelcol/config.yaml https://github.com/joetanx/o11y-lab/raw/main/stack-config/otelcol.yaml
+curl -sLo /etc/prometheus/prometheus.yml https://github.com/joetanx/o11y-lab/raw/main/stack-config/prometheus.yml
+curl -sLo /etc/tempo/tempo.yaml https://github.com/joetanx/o11y-lab/raw/main/stack-config/tempo.yaml
 ```
 
 ### 1.2. Run o11y stack
@@ -72,12 +72,12 @@ podman pull docker.io/prom/prometheus:latest
 podman pull docker.io/grafana/tempo:latest
 podman pull docker.io/grafana/loki:latest
 podman pull docker.io/grafana/grafana:latest
-curl -sLo /etc/containers/systemd/o11y.network https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack/podman-systemd/o11y.network
-curl -sLo /etc/containers/systemd/o11y-otelcol.container https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack/podman-systemd/o11y-otelcol.container
-curl -sLo /etc/containers/systemd/o11y-prometheus.container https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack/podman-systemd/o11y-prometheus.container
-curl -sLo /etc/containers/systemd/o11y-tempo.container https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack/podman-systemd/o11y-tempo.container
-curl -sLo /etc/containers/systemd/o11y-loki.container https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack/podman-systemd/o11y-loki.container
-curl -sLo /etc/containers/systemd/o11y-grafana.container https://github.com/joetanx/o11y-lab/raw/refs/heads/main/stack/podman-systemd/o11y-grafana.container
+curl -sLo /etc/containers/systemd/o11y.network https://github.com/joetanx/o11y-lab/raw/main/stack/podman-systemd/o11y.network
+curl -sLo /etc/containers/systemd/o11y-otelcol.container https://github.com/joetanx/o11y-lab/raw/main/stack/podman-systemd/o11y-otelcol.container
+curl -sLo /etc/containers/systemd/o11y-prometheus.container https://github.com/joetanx/o11y-lab/raw/main/stack/podman-systemd/o11y-prometheus.container
+curl -sLo /etc/containers/systemd/o11y-tempo.container https://github.com/joetanx/o11y-lab/raw/main/stack/podman-systemd/o11y-tempo.container
+curl -sLo /etc/containers/systemd/o11y-loki.container https://github.com/joetanx/o11y-lab/raw/main/stack/podman-systemd/o11y-loki.container
+curl -sLo /etc/containers/systemd/o11y-grafana.container https://github.com/joetanx/o11y-lab/raw/main/stack/podman-systemd/o11y-grafana.container
 systemctl daemon-reload
 systemctl start o11y-grafana
 ```
