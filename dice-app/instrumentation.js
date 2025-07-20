@@ -15,13 +15,16 @@ registerInstrumentations({
   instrumentations: [new HttpInstrumentation()]
 });
 
+// get otel collector from environment
+const OTELCOL = `http://${process.env.OTELCOL}:4318/v1/`;
+
 // trace
 const { trace } = require('@opentelemetry/api');
 const { BasicTracerProvider, BatchSpanProcessor } = require('@opentelemetry/sdk-trace-base');
 const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-proto');
 const tracerProvider = new BasicTracerProvider({
   resource,
-  spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter())]
+  spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter({url: OTELCOL+'traces'}))]
 });
 trace.setGlobalTracerProvider(tracerProvider);
 
@@ -30,7 +33,7 @@ const { metrics } = require('@opentelemetry/api');
 const { MeterProvider, PeriodicExportingMetricReader } = require('@opentelemetry/sdk-metrics');
 const { OTLPMetricExporter } = require('@opentelemetry/exporter-metrics-otlp-proto');
 const metricReader = new PeriodicExportingMetricReader({
-  exporter: new OTLPMetricExporter(),
+  exporter: new OTLPMetricExporter({url: OTELCOL+'metrics'}),
   exportIntervalMillis: 10000 //Default is 60000ms (60 seconds)
 });
 const meterProvider = new MeterProvider({
@@ -43,7 +46,7 @@ metrics.setGlobalMeterProvider(meterProvider);
 const { logs } = require('@opentelemetry/api-logs');
 const { LoggerProvider, SimpleLogRecordProcessor } = require('@opentelemetry/sdk-logs');
 const { OTLPLogExporter } = require('@opentelemetry/exporter-logs-otlp-proto');
-const logRecordProcessor = new SimpleLogRecordProcessor(new OTLPLogExporter());
+const logRecordProcessor = new SimpleLogRecordProcessor(new OTLPLogExporter({url: OTELCOL+'logs'}));
 const loggerProvider = new LoggerProvider({
   resource: resource,
   processors: [logRecordProcessor]
