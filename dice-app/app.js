@@ -1,6 +1,6 @@
 const { trace, metrics, SpanStatusCode } = require('@opentelemetry/api');
 const express = require('express');
-const { rollTheDice } = require('./dice.js');
+const { rollTheDice } = require('./functions.js');
 
 const tracer = trace.getTracer('dice-server', '0.1.0');
 const meter = metrics.getMeter('dice-server');
