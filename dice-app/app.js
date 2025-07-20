@@ -8,7 +8,7 @@ const meter = metrics.getMeter('dice-server');
 const winston = require('winston');
 const { OpenTelemetryTransportV3 } = require('@opentelemetry/winston-transport');
 const logger = winston.createLogger({
-  level: 'info',
+  level: 'debug',
   transports: [
     new winston.transports.Console(),
     new OpenTelemetryTransportV3()
@@ -19,7 +19,7 @@ const PORT = parseInt(process.env.PORT || '8080');
 const app = express();
 
 app.get('/rolldice', (req, res) => {
-  logger.info(`${req.socket.remoteAddress}:${req.socket.remotePort} ${req.method} ${req.originalUrl} ${req.headers['user-agent']}`)
+  logger.debug(`${req.socket.remoteAddress}:${req.socket.remotePort} ${req.method} ${req.originalUrl} ${req.headers['user-agent']}`)
   const histogram = meter.createHistogram('task.duration');
   const startTime = new Date().getTime();
 
@@ -33,7 +33,7 @@ app.get('/rolldice', (req, res) => {
       code: SpanStatusCode.ERROR,
       message: err.message,
     });
-
+    logger.warn("Client request without parameter 'rolls'.");
     res.status(400).send(err.message + '\n');
     appSpan.end();
     return;
