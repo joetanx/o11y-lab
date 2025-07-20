@@ -1,0 +1,270 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: otelcol
+  namespace: o11y
+spec:
+  type: ClusterIP
+  selector:
+    app: otelcol
+  ports:
+  - protocol: TCP
+    name: grpc
+    port: 4317
+    targetPort: 4317
+  - protocol: TCP
+    name: http
+    port: 4138
+    targetPort: 4138
+  - protocol: TCP
+    name: prometheus
+    port: 9464
+    targetPort: 9464
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: o11y
+spec:
+  type: ClusterIP
+  selector:
+    app: prometheus
+  ports:
+  - protocol: TCP
+    port: 9090
+    targetPort: 9090
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tempo
+  namespace: o11y
+spec:
+  type: ClusterIP
+  selector:
+    app: tempo
+  ports:
+  - protocol: TCP
+    port: 3200
+    targetPort: 3200
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki
+  namespace: o11y
+spec:
+  type: ClusterIP
+  selector:
+    app: loki
+  ports:
+  - protocol: TCP
+    port: 3100
+    targetPort: 3100
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: o11y
+spec:
+  clusterIP: None
+  selector:
+    app: grafana
+  ports:
+  - protocol: TCP
+    port: 3000
+    targetPort: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana
+  namespace: o11y
+  annotations:
+    cert-manager.io/cluster-issuer: ca-issuer
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: o11y.vx
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number: 3000
+  tls:
+  - hosts:
+    - o11y.vx
+    secretName: grafana-tls
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otelcol
+  labels:
+    app: otelcol
+  namespace: o11y
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otelcol
+  template:
+    metadata:
+      labels:
+        app: otelcol
+    spec:
+      containers:
+      - name: otelcol
+        image: docker.io/otel/opentelemetry-collector-contrib:latest
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - mountPath: /etc/otelcol-contrib/config.yaml
+          subPath: config.yaml
+          name: otelcol-config
+          readOnly: true
+      volumes:
+      - name: otelcol-config
+        configMap:
+          name: otelcol-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  labels:
+    app: prometheus
+  namespace: o11y
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - name: prometheus
+        image: docker.io/prom/prometheus:latest
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - mountPath: /etc/prometheus/prometheus.yml
+          subPath: prometheus.yml
+          name: prometheus-config
+          readOnly: true
+        - mountPath: /prometheus
+          name: prometheus-data
+      volumes:
+      - name: prometheus-config
+        configMap:
+          name: prometheus-config
+      - name: prometheus-data
+        hostPath:
+          path: /var/prometheus
+          type: DirectoryOrCreate
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tempo
+  labels:
+    app: tempo
+  namespace: o11y
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tempo
+  template:
+    metadata:
+      labels:
+        app: tempo
+    spec:
+      containers:
+      - name: tempo
+        image: docker.io/grafana/tempo:latest
+        imagePullPolicy: IfNotPresent
+        args:
+        - -config.file=/etc/tempo.yaml
+        volumeMounts:
+        - mountPath: /etc/tempo.yaml
+          subPath: tempo.yaml
+          name: tempo-config
+          readOnly: true
+        - mountPath: /var/tempo
+          name: tempo-data
+      volumes:
+      - name: tempo-config
+        configMap:
+          name: tempo-config
+      - name: tempo-data
+        hostPath:
+          path: /var/tempo
+          type: DirectoryOrCreate
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki
+  labels:
+    app: loki
+  namespace: o11y
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loki
+  template:
+    metadata:
+      labels:
+        app: loki
+    spec:
+      containers:
+      - name: loki
+        image: docker.io/grafana/loki:latest
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - mountPath: /loki
+          name: loki-data
+      volumes:
+      - name: loki-data
+        hostPath:
+          path: /var/loki
+          type: DirectoryOrCreate
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  labels:
+    app: grafana
+  namespace: o11y
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: docker.io/grafana/grafana:latest
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - mountPath: /var/lib/grafana
+          name: grafana-data
+      volumes:
+      - name: grafana-data
+        hostPath:
+          path: /var/grafana
+          type: DirectoryOrCreate
