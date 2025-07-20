@@ -13,7 +13,7 @@ function rollOnce(i, min, max) {
 
     span.addEvent('child rollOnce function', {
       'log.facility': 'user',
-      'log.severity': 'informational',
+      'log.severity': 'debug',
       'log.message': 'Execute child rollOnce function',
     });
 
@@ -34,7 +34,7 @@ function rollTheDice(rolls, min, max) {
       }
       parentSpan.addEvent('parent rollTheDice function', {
         'log.facility': 'user',
-        'log.severity': 'informational',
+        'log.severity': 'debug',
         'log.message': 'Execute parent rollTheDice function',
       });
       // Be sure to end the span!
