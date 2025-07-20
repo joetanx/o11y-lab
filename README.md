@@ -3,29 +3,28 @@
 ```mermaid
 flowchart TD
 
-  subgraph Collection
-    A(Application)
-    B(Otel collector)
-  end
+subgraph Collection
+  A(Application)
+  B(Otel collector)
+end
 
-  subgraph Backends
-    C(Tempo)
-    D(Loki)
-    E(Prometheus)
-  end
+subgraph Backends
+  C(Tempo)
+  D(Loki)
+  E(Prometheus)
+end
 
-  subgraph Visualization
-    F(Grafana)
-  end
+subgraph Visualization
+  F(Grafana)
+end
 
-  A -->|OTLP: 4317| B
-  B -->|Push traces: 4317| C
-  B -->|Push logs: 3100| D
-  E -->|Scrape metrics: 9464| B
-
-  F -->|9090| E
-  F -->|3100| D
-  F -->|3200| C
+A ---|4317| B
+B ---|4317| C
+B ---|3100| D
+B ---|9464| E
+C ---|3200| F
+D ---|3100| F
+E ---|9090| F
 ```
 
 ### 1.1. Setup preparation
