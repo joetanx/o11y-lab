@@ -32,8 +32,8 @@ Files:
 |Files|Path|
 |---|---|
 |Stack config for Otel collector, Prometheus and Tempo|https://github.com/joetanx/o11y-lab/tree/main/stack/config|
-|Systemd service configuration example|https://github.com/joetanx/o11y-lab/tree/main/stack/podman-systemd|
-|Kubernetes stack deployment manifest|https://github.com/joetanx/o11y-lab/tree/main/stack/kubernetes|
+|Configuration files for running stack as systemd services|https://github.com/joetanx/o11y-lab/tree/main/stack/podman-systemd|
+|Manifest file for running as stack Kubernetes deployment |https://github.com/joetanx/o11y-lab/tree/main/stack/kubernetes|
 
 ### 1.1. Stack on Kubernetes
 
@@ -185,10 +185,22 @@ kubectl create -f https://github.com/joetanx/o11y-lab/raw/main/dice-app/dice.yam
 
 ### 2.2. Run on Podman
 
-Run using Podman CLI (does not auto start on host reboot):
+#### 2.2.1. Option 1: using Podman CLI
+
+> [!Note]
+>
+> Does not auto start on host reboot
 
 ```sh
 podman run --name dice -d -p 8080:3000 --network o11y -v /etc/dice:/etc/dice:Z -e OTELCOL=otelcol -e PORT=3000 -w /etc/dice docker.io/library/node:latest /bin/bash -c "npm install express winston @opentelemetry/sdk-node @opentelemetry/api @opentelemetry/auto-instrumentations-node @opentelemetry/sdk-metrics @opentelemetry/sdk-trace-node @opentelemetry/sdk-logs @opentelemetry/winston-transport @opentelemetry/exporter-trace-otlp-proto @opentelemetry/exporter-metrics-otlp-proto @opentelemetry/exporter-logs-otlp-proto && node --require ./instrumentation.js app.js"
+```
+
+#### 2.2.2. Option 2: using systemd (quadlets)
+
+```sh
+curl -sLo /etc/containers/systemd/dice.container https://github.com/joetanx/o11y-lab/raw/refs/heads/main/dice-app/dice.container
+systemctl daemon-reload
+systemctl start dice
 ```
 
 ### 2.3. Run via manual install
