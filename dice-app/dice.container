@@ -1,0 +1,19 @@
+[Unit]
+Description=Run node.js dice container
+Requires=o11y-grafana.service
+After=o11y-grafana.service
+
+[Container]
+ContainerName=dice
+HostName=dice
+Image=docker.io/library/node:latest
+Network=o11y.network
+PublishPort=8080:3000
+Volume=/etc/dice:/etc/dice:Z
+WorkingDir=/etc/dice
+Environment=OTELCOL=otelcol
+Environment=PORT=3000
+Exec=sh -c "npm install express winston @opentelemetry/sdk-node @opentelemetry/api @opentelemetry/auto-instrumentations-node @opentelemetry/sdk-metrics @opentelemetry/sdk-trace-node @opentelemetry/sdk-logs @opentelemetry/winston-transport @opentelemetry/exporter-trace-otlp-proto @opentelemetry/exporter-metrics-otlp-proto @opentelemetry/exporter-logs-otlp-proto && node --require ./instrumentation.js app.js"
+
+[Install]
+WantedBy=multi-user.target
