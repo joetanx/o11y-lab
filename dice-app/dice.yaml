@@ -1,0 +1,93 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: dice
+  namespace: dice
+spec:
+  clusterIP: None
+  selector:
+    app: dice
+  ports:
+  - protocol: TCP
+    port: 3000
+    targetPort: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dice
+  namespace: dice
+  annotations:
+    cert-manager.io/cluster-issuer: ca-issuer
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: dice.vx
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: dice
+            port:
+              number: 3000
+  tls:
+  - hosts:
+    - dice.vx
+    secretName: dice-tls
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dice
+  labels:
+    app: dice
+  namespace: dice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dice
+  template:
+    metadata:
+      labels:
+        app: dice
+    spec:
+      containers:
+      - name: dice
+        image: docker.io/library/node:latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/bash", "-c"]
+        args:
+        - npm install express winston @opentelemetry/sdk-node @opentelemetry/api @opentelemetry/auto-instrumentations-node @opentelemetry/sdk-metrics @opentelemetry/sdk-trace-node @opentelemetry/sdk-logs @opentelemetry/winston-transport @opentelemetry/exporter-trace-otlp-proto @opentelemetry/exporter-metrics-otlp-proto @opentelemetry/exporter-logs-otlp-proto &&
+          node --require /etc/dice/instrumentation.js /etc/dice/app.js
+        workingDir: /etc/dice
+        env:
+        - name: PORT
+          value: '3000'
+        - name: OTELCOL
+          value: otelcol.o11y.svc.cluster.local
+        volumeMounts:
+        - mountPath: /etc/dice/app.js
+          subPath: app.js
+          name: dice-app
+          readOnly: true
+        - mountPath: /etc/dice/functions.js
+          subPath: functions.js
+          name: dice-functions
+          readOnly: true
+        - mountPath: /etc/dice/instrumentation.js
+          subPath: instrumentation.js
+          name: dice-instrumentation
+          readOnly: true
+      volumes:
+      - name: dice-app
+        configMap:
+          name: dice-app
+      - name: dice-functions
+        configMap:
+          name: dice-functions
+      - name: dice-instrumentation
+        configMap:
+          name: dice-instrumentation
