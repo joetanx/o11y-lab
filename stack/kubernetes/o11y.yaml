@@ -14,8 +14,8 @@ spec:
     targetPort: 4317
   - protocol: TCP
     name: http
-    port: 4138
-    targetPort: 4138
+    port: 4318
+    targetPort: 4318
   - protocol: TCP
     name: prometheus
     port: 9464
